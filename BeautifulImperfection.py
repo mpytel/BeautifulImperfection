@@ -1005,8 +1005,8 @@ def main():
     max_undo_history = 10  # Maximum number of states to remember
 
     # Start with tutorial if it's the first run
-    if show_tutorial_mode:
-        game_state = STATE_TUTORIAL
+    # if show_tutorial_mode:
+    #     game_state = STATE_TUTORIAL
 
     while running:
         mouse_pos = pygame.mouse.get_pos()
@@ -1583,7 +1583,7 @@ def main():
         # Draw restart confirmation if active
         if restart_confirmation and game_state == STATE_PLAYING:
             # Draw confirmation dialog
-            dialog_width, dialog_height = 300, 100
+            dialog_width, dialog_height = 450, 100
             dialog_x = WIDTH // 2 - dialog_width // 2
             dialog_y = HEIGHT // 2 - dialog_height // 2
 
