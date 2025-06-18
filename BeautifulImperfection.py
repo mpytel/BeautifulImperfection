@@ -23,130 +23,6 @@ WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Beautiful Imperfection")
 
-# Define Slider class
-class Slider:
-    def __init__(self, x, y, width, height, min_val, max_val, initial_val, label=""):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.min_val = min_val
-        self.max_val = max_val
-        self.value = initial_val
-        self.label = label
-        self.active = False
-        self.handle_radius = height * 1.5
-        self.handle_color = (100, 100, 255)
-        self.handle_hover_color = (150, 150, 255)
-        self.track_color = (200, 200, 200)
-        self.track_active_color = (150, 150, 200)
-        self.is_hovered = False
-        self.font = pygame.font.SysFont('Arial', 12)
-
-        # Calculate handle position
-        self.handle_pos = self.get_handle_pos()
-
-    def get_handle_pos(self):
-        # Convert value to position
-        ratio = (self.value - self.min_val) / (self.max_val - self.min_val)
-        return self.rect.x + int(ratio * self.rect.width)
-
-    def get_value_at_pos(self, x_pos):
-        # Convert position to value
-        ratio = max(0, min(1, (x_pos - self.rect.x) / self.rect.width))
-        return self.min_val + ratio * (self.max_val - self.min_val)
-
-    def update(self, mouse_pos, mouse_pressed):
-        x, y = mouse_pos
-
-        # Check if mouse is over handle
-        handle_rect = pygame.Rect(
-            self.handle_pos - self.handle_radius,
-            self.rect.centery - self.handle_radius,
-            self.handle_radius * 2,
-            self.handle_radius * 2
-        )
-        self.is_hovered = handle_rect.collidepoint(x, y)
-
-        # Update active state
-        if mouse_pressed and self.is_hovered:
-            self.active = True
-        elif not mouse_pressed:
-            self.active = False
-
-        # Update value if active
-        if self.active:
-            self.value = self.get_value_at_pos(x)
-            self.value = max(self.min_val, min(self.max_val, self.value))
-            self.handle_pos = self.get_handle_pos()
-            return True  # Value changed
-
-        return False  # Value unchanged
-
-    def draw(self, surface):
-        # Draw track
-        track_color = self.track_active_color if self.active else self.track_color
-        pygame.draw.rect(surface, track_color, self.rect)
-        pygame.draw.rect(surface, (0, 0, 0), self.rect, 1)  # Border
-
-        # Draw handle
-        handle_color = self.handle_hover_color if self.is_hovered or self.active else self.handle_color
-        pygame.draw.circle(surface, handle_color, (self.handle_pos, self.rect.centery), self.handle_radius)
-        pygame.draw.circle(surface, (0, 0, 0), (self.handle_pos, self.rect.centery), self.handle_radius, 1)  # Border
-
-        # Draw label
-        if self.label:
-            label_text = self.font.render(self.label, True, (0, 0, 0))
-            surface.blit(label_text, (self.rect.x, self.rect.y - 20))
-
-        # Draw value
-        value_text = self.font.render(f"{int(self.value)}", True, (0, 0, 0))
-        surface.blit(value_text, (self.handle_pos - value_text.get_width() // 2, self.rect.centery + self.handle_radius + 5))
-
-        # Draw difficulty labels
-        if self.min_val == 1 and self.max_val == 10:  # Only for difficulty slider
-            # No target
-            if self.value <= 2:
-                diff_text = self.font.render("No Target", True, (100, 100, 100))
-            # Easy
-            elif self.value <= 4:
-                diff_text = self.font.render("Easy", True, (0, 150, 0))
-            # Normal
-            elif self.value <= 8:
-                diff_text = self.font.render("Normal", True, (0, 0, 150))
-            # Hard
-            else:
-                diff_text = self.font.render("Hard", True, (150, 0, 0))
-
-            surface.blit(diff_text, (self.rect.x + self.rect.width + 10, self.rect.centery - diff_text.get_height() // 2))
-
-def calculate_target_from_slider(level, difficulty_value):
-    """Calculate target harmony based on difficulty slider value (1-10)"""
-    # At difficulty ≤ 2, no target (0%)
-    if difficulty_value <= 2:
-        return 0
-
-    # At difficulty 2-4 (easy): 30-40% base
-    elif difficulty_value <= 4:
-        # Map 2-4 to 0-1
-        t = (difficulty_value - 2) / 2
-        base_target = 30 + t * 10
-        variation = (level % 3) * 2  # 0, 2, or 4 percent variation
-        return min(75, base_target + variation + (level - 1) * 3)
-
-    # At difficulty 5-8 (normal): 40-50% base
-    elif difficulty_value <= 8:
-        # Map 5-8 to 0-1
-        t = (difficulty_value - 5) / 3
-        base_target = 40 + t * 10
-        variation = (level % 3) * 3  # 0, 3, or 6 percent variation
-        return min(85, base_target + variation + (level - 1) * 4)
-
-    # At difficulty 9-10 (hard): 50-60% base
-    else:
-        # Map 9-10 to 0-1
-        t = (difficulty_value - 9)
-        base_target = 50 + t * 10
-        variation = (level % 3) * 5  # 0, 5, or 10 percent variation
-        return min(95, base_target + variation + (level - 1) * 5)
-
 # Game states
 STATE_PLAYING = 0
 STATE_GAME_OVER = 1
@@ -180,27 +56,27 @@ def check_music_files():
     """Check if all required music files (01-10) are present in the Music directory"""
     music_dir = 'assets/Music'
     missing_tracks = []
-    
+
     for i in range(1, 11):
         track_num = f"{i:02d}"
         track_found = False
-        
+
         # Check if any file starts with the track number
         if os.path.exists(music_dir):
             for file in os.listdir(music_dir):
                 if file.startswith(f"{track_num}_") and file.endswith('.mp3'):
                     track_found = True
                     break
-        
+
         if not track_found:
             missing_tracks.append(i)
-    
+
     if missing_tracks:
         print(f"Warning: Music files for tracks {missing_tracks} are missing from {music_dir}")
         print("The game will still run, but some levels will not have unique music.")
     else:
         print("All music tracks (1-10) are present.")
-    
+
     return len(missing_tracks) == 0
 
 # Function to load and play level-specific music
@@ -209,19 +85,19 @@ def load_level_music(level):
     # For levels 1-10, play the corresponding track
     # For levels > 10, cycle through tracks 1-10
     music_level = ((level - 1) % 10) + 1
-    
+
     # Format the track number with leading zero
     track_num = f"{music_level:02d}"
-    
+
     # Get list of music files
     music_dir = 'assets/Music'
     try:
         music_files = [f for f in os.listdir(music_dir) if f.startswith(f"{track_num}_") and f.endswith('.mp3')]
-        
+
         if music_files:
             music_path = os.path.join(music_dir, music_files[0])
             print(f"Loading music for level {level}: {music_path}")
-            
+
             # Load and play the music
             pygame.mixer.music.load(music_path)
             pygame.mixer.music.set_volume(0.5)  # Set volume to 50%
@@ -386,6 +262,36 @@ def draw_hint_box(surface, hint_text, score):
 # Fonts
 font = pygame.font.SysFont('Arial', 12)  # Reduced from 14 to 12
 title_font = pygame.font.SysFont('Arial', 24, bold=True)
+
+def calculate_target_from_slider(level, difficulty_value):
+    """Calculate target harmony based on difficulty slider value (1-10)"""
+    # At difficulty ≤ 2, no target (0%)
+    if difficulty_value <= 2:
+        return 0
+
+    # At difficulty 2-4 (easy): 30-40% base
+    elif difficulty_value <= 4:
+        # Map 2-4 to 0-1
+        t = (difficulty_value - 2) / 2
+        base_target = 30 + t * 10
+        variation = (level % 3) * 2  # 0, 2, or 4 percent variation
+        return min(75, base_target + variation + (level - 1) * 3)
+
+    # At difficulty 5-8 (normal): 40-50% base
+    elif difficulty_value <= 8:
+        # Map 5-8 to 0-1
+        t = (difficulty_value - 5) / 3
+        base_target = 40 + t * 10
+        variation = (level % 3) * 3  # 0, 3, or 6 percent variation
+        return min(85, base_target + variation + (level - 1) * 4)
+
+    # At difficulty 9-10 (hard): 50-60% base
+    else:
+        # Map 9-10 to 0-1
+        t = (difficulty_value - 9)
+        base_target = 50 + t * 10
+        variation = (level % 3) * 5  # 0, 5, or 10 percent variation
+        return min(95, base_target + variation + (level - 1) * 5)
 
 # Create high scores directory if it doesn't exist
 if not os.path.exists('high_scores'):
@@ -552,16 +458,16 @@ def restart_game():
     fractal = FractalStructure()
 
     # Create initial element for level 1
-    elements = [
-        Element(WIDTH // 2, HEIGHT // 2, size=50, love_logic_ratio=0.5)
-    ]
+    initial_element = Element(WIDTH // 2, HEIGHT // 2, size=50, love_logic_ratio=random.uniform(0.2, 0.8))
+    initial_element.shape = random.randint(0, 9)  # Set random shape
+    elements = [initial_element]
 
     for element in elements:
         fractal.add_element(element)
 
     # Play sound effect
     sounds['button_click'].play()
-    
+
     # Reset music to level 1
     load_level_music(1)
 
@@ -846,7 +752,7 @@ def create_next_level():
 
     # Advance to the next level
     new_level = fractal.advance_level()
-    
+
     # Load music for the new level
     load_level_music(new_level)
 
@@ -872,23 +778,20 @@ def create_next_level():
     if new_level == 2:
         # Use a fixed distance between elements
         fixed_distance = 120
-        
+
         # Determine appropriate size for level 2 elements
-        # If coming from level 1 with a single element, use a more moderate size
-        if len(fractal.previous_structure['elements']) == 1:
-            element_size = 50  # Moderate size when coming from a single element in level 1
-            
-            # For single elements, make sure the structure pattern is properly set up
-            # This ensures changes to shape, color, and evolution are visible
-            if len(structure_pattern['positions']) == 1:
-                # Get the properties from the original element
-                original_element = fractal.previous_structure['elements'][0]
-                structure_pattern['shapes'] = [original_element.shape]
-                structure_pattern['colors'] = [original_element.color]
-                structure_pattern['levels'] = [original_element.level]
-                structure_pattern['love_logic_ratios'] = [original_element.love_logic_ratio]
-        else:
-            element_size = 80  # Default size for other cases
+        # Make elements half the size for levels > 1
+        element_size = 25  # Half of the original 50 size
+
+        # For single elements, make sure the structure pattern is properly set up
+        # This ensures changes to shape, color, and evolution are visible
+        if len(structure_pattern['positions']) == 1:
+            # Get the properties from the original element
+            original_element = fractal.previous_structure['elements'][0]
+            structure_pattern['shapes'] = [original_element.shape]
+            structure_pattern['colors'] = [original_element.color]
+            structure_pattern['levels'] = [original_element.level]
+            structure_pattern['love_logic_ratios'] = [original_element.love_logic_ratio]
 
         # Create two elements with the previous level's structure
         element1 = Element(WIDTH//2 - fixed_distance/2, HEIGHT//2, size=element_size,
@@ -980,12 +883,9 @@ def create_next_level():
             y = geo_y * (1 - organic_factor) + org_y * organic_factor
 
             # Create element with the previous structure pattern
-            # Determine appropriate size based on previous level
-            if len(fractal.previous_structure['elements']) == 1 and new_level <= 3:
-                element_size = 40  # Much smaller size when coming from a single element
-            else:
-                element_size = 70  # Consistent size for better visibility
-                
+            # Make elements half the size for levels > 1
+            element_size = 35  # Half of the original 70 size
+
             element = Element(x, y, size=element_size, level=new_level,
                              love_logic_ratio=0.5 + (i % 2) * 0.1 - (i % 2 == 0) * 0.1,
                              structure_pattern=structure_pattern)
@@ -1012,9 +912,9 @@ def create_next_level():
 complete_button = Button(WIDTH - 150, 40, 120, 40, "COMPLETE", GREEN, (100, 200, 100))
 
 # Create initial element for level 1 (just one element)
-elements = [
-    Element(WIDTH // 2, HEIGHT // 2, size=50, love_logic_ratio=0.5)
-]
+initial_element = Element(WIDTH // 2, HEIGHT // 2, size=50, love_logic_ratio=random.uniform(0.2, 0.8))
+initial_element.shape = random.randint(0, 9)  # Set random shape
+elements = [initial_element]
 
 for element in elements:
     fractal.add_element(element)
@@ -1443,7 +1343,7 @@ def main():
 
                 player_score += bonus
                 level_bonuses.append(bonus)
-                
+
                 if difficulty_knob.value <= 2:
                     print(f"Level {fractal.level} complete! No target required. Achieved: {fractal.harmony_score:.1f}%, Total Score: {player_score:.1f}")
                 else:
@@ -1507,7 +1407,7 @@ def main():
 
         # Calculate target based on difficulty knob
         target = calculate_target_from_slider(fractal.level, difficulty_knob.value)
-        
+
         # No longer forcing level 1 to have no target
         # Let the difficulty setting control whether there's a target
 
@@ -1709,247 +1609,3 @@ def main():
 # Run the game
 if __name__ == "__main__":
     main()
-class Slider:
-    def __init__(self, x, y, width, height, min_val, max_val, initial_val, label=""):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.min_val = min_val
-        self.max_val = max_val
-        self.value = initial_val
-        self.label = label
-        self.active = False
-        self.handle_radius = height * 1.5
-        self.handle_color = (100, 100, 255)
-        self.handle_hover_color = (150, 150, 255)
-        self.track_color = (200, 200, 200)
-        self.track_active_color = (150, 150, 200)
-        self.is_hovered = False
-        self.font = pygame.font.SysFont('Arial', 12)
-
-        # Calculate handle position
-        self.handle_pos = self.get_handle_pos()
-
-    def get_handle_pos(self):
-        # Convert value to position
-        ratio = (self.value - self.min_val) / (self.max_val - self.min_val)
-        return self.rect.x + int(ratio * self.rect.width)
-
-    def get_value_at_pos(self, x_pos):
-        # Convert position to value
-        ratio = max(0, min(1, (x_pos - self.rect.x) / self.rect.width))
-        return self.min_val + ratio * (self.max_val - self.min_val)
-
-    def update(self, mouse_pos, mouse_pressed):
-        x, y = mouse_pos
-
-        # Check if mouse is over handle
-        handle_rect = pygame.Rect(
-            self.handle_pos - self.handle_radius,
-            self.rect.centery - self.handle_radius,
-            self.handle_radius * 2,
-            self.handle_radius * 2
-        )
-        self.is_hovered = handle_rect.collidepoint(x, y)
-
-        # Update active state
-        if mouse_pressed and self.is_hovered:
-            self.active = True
-        elif not mouse_pressed:
-            self.active = False
-
-        # Update value if active
-        if self.active:
-            self.value = self.get_value_at_pos(x)
-            self.value = max(self.min_val, min(self.max_val, self.value))
-            self.handle_pos = self.get_handle_pos()
-            return True  # Value changed
-
-        return False  # Value unchanged
-
-    def draw(self, surface):
-        # Draw track
-        track_color = self.track_active_color if self.active else self.track_color
-        pygame.draw.rect(surface, track_color, self.rect)
-        pygame.draw.rect(surface, (0, 0, 0), self.rect, 1)  # Border
-
-        # Draw handle
-        handle_color = self.handle_hover_color if self.is_hovered or self.active else self.handle_color
-        pygame.draw.circle(surface, handle_color, (self.handle_pos, self.rect.centery), self.handle_radius)
-        pygame.draw.circle(surface, (0, 0, 0), (self.handle_pos, self.rect.centery), self.handle_radius, 1)  # Border
-
-        # Draw label
-        if self.label:
-            label_text = self.font.render(self.label, True, (0, 0, 0))
-            surface.blit(label_text, (self.rect.x, self.rect.y - 20))
-
-        # Draw value
-        value_text = self.font.render(f"{int(self.value)}", True, (0, 0, 0))
-        surface.blit(value_text, (self.handle_pos - value_text.get_width() // 2, self.rect.centery + self.handle_radius + 5))
-
-        # Draw difficulty labels
-        if self.min_val == 1 and self.max_val == 10:  # Only for difficulty slider
-            # No target
-            if self.value <= 2:
-                diff_text = self.font.render("No Target", True, (100, 100, 100))
-            # Easy
-            elif self.value <= 4:
-                diff_text = self.font.render("Easy", True, (0, 150, 0))
-            # Normal
-            elif self.value <= 8:
-                diff_text = self.font.render("Normal", True, (0, 0, 150))
-            # Hard
-            else:
-                diff_text = self.font.render("Hard", True, (150, 0, 0))
-
-            surface.blit(diff_text, (self.rect.x + self.rect.width + 10, self.rect.centery - diff_text.get_height() // 2))
-
-def calculate_target_from_slider(level, difficulty_value):
-    """Calculate target harmony based on difficulty slider value (1-10)"""
-    # At difficulty ≤ 2, no target (0%)
-    if difficulty_value <= 2:
-        return 0
-
-    # At difficulty 2-4 (easy): 30-40% base
-    elif difficulty_value <= 4:
-        # Map 2-4 to 0-1
-        t = (difficulty_value - 2) / 2
-        base_target = 30 + t * 10
-        variation = (level % 3) * 2  # 0, 2, or 4 percent variation
-        return min(75, base_target + variation + (level - 1) * 3)
-
-    # At difficulty 5-8 (normal): 40-50% base
-    elif difficulty_value <= 8:
-        # Map 5-8 to 0-1
-        t = (difficulty_value - 5) / 3
-        base_target = 40 + t * 10
-        variation = (level % 3) * 3  # 0, 3, or 6 percent variation
-        return min(85, base_target + variation + (level - 1) * 4)
-
-    # At difficulty 9-10 (hard): 50-60% base
-    else:
-        # Map 9-10 to 0-1
-        t = (difficulty_value - 9)
-        base_target = 50 + t * 10
-        variation = (level % 3) * 5  # 0, 5, or 10 percent variation
-        return min(95, base_target + variation + (level - 1) * 5)
-class Slider:
-    def __init__(self, x, y, width, height, min_val, max_val, initial_val, label=""):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.min_val = min_val
-        self.max_val = max_val
-        self.value = initial_val
-        self.label = label
-        self.active = False
-        self.handle_radius = height * 1.5
-        self.handle_color = (100, 100, 255)
-        self.handle_hover_color = (150, 150, 255)
-        self.track_color = (200, 200, 200)
-        self.track_active_color = (150, 150, 200)
-        self.is_hovered = False
-        self.font = pygame.font.SysFont('Arial', 12)
-
-        # Calculate handle position
-        self.handle_pos = self.get_handle_pos()
-
-    def get_handle_pos(self):
-        # Convert value to position
-        ratio = (self.value - self.min_val) / (self.max_val - self.min_val)
-        return self.rect.x + int(ratio * self.rect.width)
-
-    def get_value_at_pos(self, x_pos):
-        # Convert position to value
-        ratio = max(0, min(1, (x_pos - self.rect.x) / self.rect.width))
-        return self.min_val + ratio * (self.max_val - self.min_val)
-
-    def update(self, mouse_pos, mouse_pressed):
-        x, y = mouse_pos
-
-        # Check if mouse is over handle
-        handle_rect = pygame.Rect(
-            self.handle_pos - self.handle_radius,
-            self.rect.centery - self.handle_radius,
-            self.handle_radius * 2,
-            self.handle_radius * 2
-        )
-        self.is_hovered = handle_rect.collidepoint(x, y)
-
-        # Update active state
-        if mouse_pressed and self.is_hovered:
-            self.active = True
-        elif not mouse_pressed:
-            self.active = False
-
-        # Update value if active
-        if self.active:
-            self.value = self.get_value_at_pos(x)
-            self.value = max(self.min_val, min(self.max_val, self.value))
-            self.handle_pos = self.get_handle_pos()
-            return True  # Value changed
-
-        return False  # Value unchanged
-
-    def draw(self, surface):
-        # Draw track
-        track_color = self.track_active_color if self.active else self.track_color
-        pygame.draw.rect(surface, track_color, self.rect)
-        pygame.draw.rect(surface, (0, 0, 0), self.rect, 1)  # Border
-
-        # Draw handle
-        handle_color = self.handle_hover_color if self.is_hovered or self.active else self.handle_color
-        pygame.draw.circle(surface, handle_color, (self.handle_pos, self.rect.centery), self.handle_radius)
-        pygame.draw.circle(surface, (0, 0, 0), (self.handle_pos, self.rect.centery), self.handle_radius, 1)  # Border
-
-        # Draw label
-        if self.label:
-            label_text = self.font.render(self.label, True, (0, 0, 0))
-            surface.blit(label_text, (self.rect.x, self.rect.y - 20))
-
-        # Draw value
-        value_text = self.font.render(f"{int(self.value)}", True, (0, 0, 0))
-        surface.blit(value_text, (self.handle_pos - value_text.get_width() // 2, self.rect.centery + self.handle_radius + 5))
-
-        # Draw difficulty labels
-        if self.min_val == 1 and self.max_val == 10:  # Only for difficulty slider
-            # No target
-            if self.value <= 2:
-                diff_text = self.font.render("No Target", True, (100, 100, 100))
-            # Easy
-            elif self.value <= 4:
-                diff_text = self.font.render("Easy", True, (0, 150, 0))
-            # Normal
-            elif self.value <= 8:
-                diff_text = self.font.render("Normal", True, (0, 0, 150))
-            # Hard
-            else:
-                diff_text = self.font.render("Hard", True, (150, 0, 0))
-
-            surface.blit(diff_text, (self.rect.x + self.rect.width + 10, self.rect.centery - diff_text.get_height() // 2))
-
-def calculate_target_from_slider(level, difficulty_value):
-    """Calculate target harmony based on difficulty slider value (1-10)"""
-    # At difficulty ≤ 2, no target (0%)
-    if difficulty_value <= 2:
-        return 0
-
-    # At difficulty 2-4 (easy): 30-40% base
-    elif difficulty_value <= 4:
-        # Map 2-4 to 0-1
-        t = (difficulty_value - 2) / 2
-        base_target = 30 + t * 10
-        variation = (level % 3) * 2  # 0, 2, or 4 percent variation
-        return min(75, base_target + variation + (level - 1) * 3)
-
-    # At difficulty 5-8 (normal): 40-50% base
-    elif difficulty_value <= 8:
-        # Map 5-8 to 0-1
-        t = (difficulty_value - 5) / 3
-        base_target = 40 + t * 10
-        variation = (level % 3) * 3  # 0, 3, or 6 percent variation
-        return min(85, base_target + variation + (level - 1) * 4)
-
-    # At difficulty 9-10 (hard): 50-60% base
-    else:
-        # Map 9-10 to 0-1
-        t = (difficulty_value - 9)
-        base_target = 50 + t * 10
-        variation = (level % 3) * 5  # 0, 5, or 10 percent variation
-        return min(95, base_target + variation + (level - 1) * 5)

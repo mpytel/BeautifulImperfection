@@ -112,8 +112,9 @@ class Element:
             # For single elements, use a fixed scale factor that's not too small
             self.structure_scale_factor = 0.4
         else:
-            # Normal scaling for multiple elements
-            self.structure_scale_factor = min((self.size * 0.8) / max(width, 1), (self.size * 0.8) / max(height, 1))
+            # For multiple elements, use a larger scale factor to preserve their size
+            # This ensures elements from previous levels don't appear smaller
+            self.structure_scale_factor = min((self.size * 1.6) / max(width, 1), (self.size * 1.6) / max(height, 1))
         
         scale_factor = self.structure_scale_factor
 
