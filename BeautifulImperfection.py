@@ -697,7 +697,7 @@ def show_high_scores(screen):
 
     # Draw back instruction
     back_font = pygame.font.SysFont('Arial', 18)
-    back_text = back_font.render("Press RETURN to exit", True, (0, 0, 0))
+    back_text = back_font.render("Press ESCAPE to exit", True, (0, 0, 0))
     screen.blit(back_text, (box_x + box_width // 2 - back_text.get_width() // 2, box_y + box_height - 40))
 
 def create_particle_effect(x, y, color, count=20, speed=3, size_range=(2, 6), duration=30):
@@ -1025,7 +1025,7 @@ def main():
                 running = False
 
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
+                if event.key == pygame.K_ESCAPE:
                     if game_state == STATE_HIGH_SCORE_DISPLAY or game_state == STATE_TUTORIAL:
                         game_state = STATE_PLAYING
                     else:
