@@ -68,8 +68,12 @@ class Element:
         # Draw element with fractal pattern based on level and type
         if self.structure_pattern:
             # This is a higher-level element containing a previous structure
+            # Check if it's a single element from level 1
+            is_single_element = 'positions' in self.structure_pattern and len(self.structure_pattern['positions']) == 1
+            
             # First draw a background circle/shape with the element's color
             self.draw_shape(surface, self.x, self.y, self.size//2)
+            
             # Then draw the structure pattern on top
             self.draw_structure_pattern(surface)
         else:
@@ -85,7 +89,10 @@ class Element:
         positions = self.structure_pattern['positions']
         if not positions:
             return
-
+            
+        # Special case for single element from level 1
+        is_single_element = len(positions) == 1
+            
         # Calculate the bounding box of the original structure
         min_x = min(pos[0] for pos in positions)
         max_x = max(pos[0] for pos in positions)
@@ -101,8 +108,13 @@ class Element:
         center_y = (min_y + max_y) / 2
 
         # Calculate the scale factor to fit the structure inside this element
-        # Use a larger scale factor to make the pattern more visible
-        self.structure_scale_factor = min((self.size * 0.8) / width, (self.size * 0.8) / height)
+        if is_single_element:
+            # For single elements, use a fixed scale factor that's not too small
+            self.structure_scale_factor = 0.4
+        else:
+            # Normal scaling for multiple elements
+            self.structure_scale_factor = min((self.size * 0.8) / max(width, 1), (self.size * 0.8) / max(height, 1))
+        
         scale_factor = self.structure_scale_factor
 
         # Get original properties if available
@@ -110,6 +122,17 @@ class Element:
         original_shapes = self.structure_pattern.get('shapes', [])
         original_levels = self.structure_pattern.get('levels', [])
         original_love_logic = self.structure_pattern.get('love_logic_ratios', [])
+
+        # For single elements, use the current element's properties
+        if is_single_element:
+            if len(original_colors) > 0:
+                original_colors[0] = self.color
+            if len(original_shapes) > 0:
+                original_shapes[0] = self.shape
+            if len(original_levels) > 0:
+                original_levels[0] = self.level
+            if len(original_love_logic) > 0:
+                original_love_logic[0] = self.love_logic_ratio
 
         # Draw connections from the pattern using the element's color (for links only)
         if 'connections' in self.structure_pattern:
@@ -178,7 +201,12 @@ class Element:
             node_level = original_levels[i] if i < len(original_levels) else 1
 
             # Draw the node with increased size
-            node_size = max(10, int(15 * scale_factor))  # Increased size for better visibility
+            if is_single_element:
+                # Much smaller node size for single elements
+                node_size = max(5, int(8 * scale_factor))
+            else:
+                # Normal node size for multiple elements
+                node_size = max(10, int(15 * scale_factor))  # Increased size for better visibility
 
             # For evolved elements, draw fractal patterns based on their level
             if node_level > 1:
@@ -194,11 +222,13 @@ class Element:
 
         # Draw smaller shapes around it if evolved
         if depth > 1:
-            num_shapes = min(depth * 2, 8)  # More shapes at higher levels
+            # Make evolution more visible by increasing the number of shapes
+            num_shapes = min(depth * 3, 12)  # More shapes at higher levels
             for i in range(num_shapes):
                 angle = 2 * math.pi * i / num_shapes
-                new_x = x + int(size * 0.8 * math.cos(angle))
-                new_y = y + int(size * 0.8 * math.sin(angle))
+                # Increase the distance from center for better visibility
+                new_x = x + int(size * 1.0 * math.cos(angle))
+                new_y = y + int(size * 1.0 * math.sin(angle))
                 new_size = size // 2
 
                 # Recursive fractal pattern with decreasing depth
@@ -207,6 +237,9 @@ class Element:
 
     def draw_node_shape(self, surface, x, y, size, shape, color):
         """Draw a specific shape for a node"""
+        # Increase minimum size for better visibility
+        size = max(size, 5)
+        
         # Draw the shape based on the shape property
         if shape == 0:  # Circle
             pygame.draw.circle(surface, color, (x, y), size)
@@ -430,9 +463,12 @@ class Element:
         # Cycle to the next shape
         self.shape = (self.shape + 1) % 10
 
-        # For higher-level elements, we don't want to modify the structure pattern
-        # This ensures changes only affect the selected element
-        # The structure pattern represents the previous level's elements and should remain unchanged
+        # For higher-level elements, we need to update the structure pattern
+        # to ensure shape changes are visible
+        if self.structure_pattern and 'shapes' in self.structure_pattern:
+            # Update the first shape in the pattern to match this element's shape
+            if len(self.structure_pattern['shapes']) > 0:
+                self.structure_pattern['shapes'][0] = self.shape
 
         return self.shape
 
@@ -455,9 +491,17 @@ class Element:
         self.love_logic_ratio = max(0, min(1, self.love_logic_ratio + amount))
         self.color = self.calculate_color()
 
-        # For higher-level elements, we don't want to modify the structure pattern
-        # This ensures changes only affect the selected element
-        # The structure pattern represents the previous level's elements and should remain unchanged
+        # For higher-level elements, update the structure pattern
+        # to ensure color changes are visible
+        if self.structure_pattern and 'colors' in self.structure_pattern:
+            # Update the first color in the pattern to match this element's color
+            if len(self.structure_pattern['colors']) > 0:
+                self.structure_pattern['colors'][0] = self.color
+                
+        # Also update love_logic_ratios in the structure pattern
+        if self.structure_pattern and 'love_logic_ratios' in self.structure_pattern:
+            if len(self.structure_pattern['love_logic_ratios']) > 0:
+                self.structure_pattern['love_logic_ratios'][0] = self.love_logic_ratio
 
     def evolve(self):
         # For elements in upper levels, cycle between min and max levels
@@ -483,6 +527,12 @@ class Element:
                 self.evolve_direction = 'down'
             elif self.level <= 1:
                 self.evolve_direction = 'up'
+
+            # Update the structure pattern to reflect evolution
+            if self.structure_pattern and 'levels' in self.structure_pattern:
+                # Update the first level in the pattern to match this element's level
+                if len(self.structure_pattern['levels']) > 0:
+                    self.structure_pattern['levels'][0] = self.level
 
             # Update the structure pattern complexity
             if self.structure_pattern:

@@ -119,8 +119,8 @@ class Slider:
 
 def calculate_target_from_slider(level, difficulty_value):
     """Calculate target harmony based on difficulty slider value (1-10)"""
-    # At difficulty 1, no target (0%)
-    if difficulty_value <= 1:
+    # At difficulty ≤ 2, no target (0%)
+    if difficulty_value <= 2:
         return 0
 
     # At difficulty 2-4 (easy): 30-40% base
@@ -553,7 +553,7 @@ def restart_game():
 
     # Create initial element for level 1
     elements = [
-        Element(WIDTH // 2, HEIGHT // 2, size=40, love_logic_ratio=0.5)
+        Element(WIDTH // 2, HEIGHT // 2, size=50, love_logic_ratio=0.5)
     ]
 
     for element in elements:
@@ -872,11 +872,28 @@ def create_next_level():
     if new_level == 2:
         # Use a fixed distance between elements
         fixed_distance = 120
+        
+        # Determine appropriate size for level 2 elements
+        # If coming from level 1 with a single element, use a more moderate size
+        if len(fractal.previous_structure['elements']) == 1:
+            element_size = 50  # Moderate size when coming from a single element in level 1
+            
+            # For single elements, make sure the structure pattern is properly set up
+            # This ensures changes to shape, color, and evolution are visible
+            if len(structure_pattern['positions']) == 1:
+                # Get the properties from the original element
+                original_element = fractal.previous_structure['elements'][0]
+                structure_pattern['shapes'] = [original_element.shape]
+                structure_pattern['colors'] = [original_element.color]
+                structure_pattern['levels'] = [original_element.level]
+                structure_pattern['love_logic_ratios'] = [original_element.love_logic_ratio]
+        else:
+            element_size = 80  # Default size for other cases
 
         # Create two elements with the previous level's structure
-        element1 = Element(WIDTH//2 - fixed_distance/2, HEIGHT//2, size=100,
+        element1 = Element(WIDTH//2 - fixed_distance/2, HEIGHT//2, size=element_size,
                            love_logic_ratio=0.6, level=2, structure_pattern=structure_pattern)  # More love (greener)
-        element2 = Element(WIDTH//2 + fixed_distance/2, HEIGHT//2, size=100,
+        element2 = Element(WIDTH//2 + fixed_distance/2, HEIGHT//2, size=element_size,
                            love_logic_ratio=0.4, level=2, structure_pattern=structure_pattern)  # More logic (bluer)
 
         # Copy shapes from previous level if available
@@ -963,7 +980,12 @@ def create_next_level():
             y = geo_y * (1 - organic_factor) + org_y * organic_factor
 
             # Create element with the previous structure pattern
-            element_size = 100  # Consistent size for better visibility
+            # Determine appropriate size based on previous level
+            if len(fractal.previous_structure['elements']) == 1 and new_level <= 3:
+                element_size = 40  # Much smaller size when coming from a single element
+            else:
+                element_size = 70  # Consistent size for better visibility
+                
             element = Element(x, y, size=element_size, level=new_level,
                              love_logic_ratio=0.5 + (i % 2) * 0.1 - (i % 2 == 0) * 0.1,
                              structure_pattern=structure_pattern)
@@ -991,7 +1013,7 @@ complete_button = Button(WIDTH - 150, 40, 120, 40, "COMPLETE", GREEN, (100, 200,
 
 # Create initial element for level 1 (just one element)
 elements = [
-    Element(WIDTH // 2, HEIGHT // 2, size=40, love_logic_ratio=0.5)
+    Element(WIDTH // 2, HEIGHT // 2, size=50, love_logic_ratio=0.5)
 ]
 
 for element in elements:
@@ -1404,14 +1426,14 @@ def main():
         if game_state == STATE_PLAYING and complete_button.is_clicked(mouse_pos, mouse_clicked):
             # Check if target has been reached or if there is no target
             target = calculate_target_from_slider(fractal.level, difficulty_knob.value)
-            if fractal.level == 1 or difficulty_knob.value <= 1 or fractal.harmony_score >= target:
+            if difficulty_knob.value <= 2 or fractal.harmony_score >= target:
                 # Save image of current level
                 saved_file = fractal.save_image()
                 print(f"Saved fractal image: {saved_file}")
 
                 # Add bonus points or rewards for exceeding target
                 # No bonus if there's no target
-                if fractal.level == 1 or difficulty_knob.value <= 1:
+                if difficulty_knob.value <= 2:
                     bonus = 0
                 # Higher bonus multiplier for levels greater than 7
                 elif fractal.level > 7:
@@ -1422,7 +1444,7 @@ def main():
                 player_score += bonus
                 level_bonuses.append(bonus)
                 
-                if fractal.level == 1 or difficulty_knob.value <= 1:
+                if difficulty_knob.value <= 2:
                     print(f"Level {fractal.level} complete! No target required. Achieved: {fractal.harmony_score:.1f}%, Total Score: {player_score:.1f}")
                 else:
                     print(f"Level {fractal.level} complete! Target: {target:.1f}%, Achieved: {fractal.harmony_score:.1f}%, Bonus: {bonus:.1f}, Total Score: {player_score:.1f}")
@@ -1486,9 +1508,8 @@ def main():
         # Calculate target based on difficulty knob
         target = calculate_target_from_slider(fractal.level, difficulty_knob.value)
         
-        # Always set target to 0 for level 1
-        if fractal.level == 1:
-            target = 0
+        # No longer forcing level 1 to have no target
+        # Let the difficulty setting control whether there's a target
 
         # Draw a more prominent target box at the top
         target_box_width = 300
@@ -1508,7 +1529,7 @@ def main():
 
         # Draw target percentage
         target_font = pygame.font.SysFont('Arial', 12)
-        if fractal.level == 1 or difficulty_knob.value <= 1:
+        if difficulty_knob.value <= 2:
             target_text = target_font.render("No Target", True, (100, 100, 100))
         else:
             target_text = target_font.render(f"Target: {target:.1f}%", True, (255, 0, 0))
@@ -1533,7 +1554,7 @@ def main():
         fill_width = max(0, min(progress_width, fill_width))
 
         # Calculate target marker position (only if there is a target)
-        if (fractal.level > 1 and difficulty_knob.value > 1) and target > 0:
+        if difficulty_knob.value > 2 and target > 0:
             target_marker_x = progress_x + int(progress_width * (target / 100))
             target_marker_x = max(progress_x, min(progress_x + progress_width, target_marker_x))
         else:
@@ -1557,7 +1578,7 @@ def main():
             pygame.draw.rect(screen, color, (progress_x, progress_y, fill_width, progress_height))
 
         # Draw target marker (only if there is a target)
-        if fractal.level > 1 and difficulty_knob.value > 1:
+        if difficulty_knob.value > 2:
             pygame.draw.line(screen, (255, 0, 0), (target_marker_x, progress_y - 2),
                             (target_marker_x, progress_y + progress_height + 2), 2)
 
@@ -1783,8 +1804,8 @@ class Slider:
 
 def calculate_target_from_slider(level, difficulty_value):
     """Calculate target harmony based on difficulty slider value (1-10)"""
-    # At difficulty 1, no target (0%)
-    if difficulty_value <= 1:
+    # At difficulty ≤ 2, no target (0%)
+    if difficulty_value <= 2:
         return 0
 
     # At difficulty 2-4 (easy): 30-40% base
@@ -1905,8 +1926,8 @@ class Slider:
 
 def calculate_target_from_slider(level, difficulty_value):
     """Calculate target harmony based on difficulty slider value (1-10)"""
-    # At difficulty 1, no target (0%)
-    if difficulty_value <= 1:
+    # At difficulty ≤ 2, no target (0%)
+    if difficulty_value <= 2:
         return 0
 
     # At difficulty 2-4 (easy): 30-40% base

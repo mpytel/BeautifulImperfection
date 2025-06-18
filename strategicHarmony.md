@@ -6,19 +6,19 @@ This guide explains how harmony works in Beautiful Imperfection and provides str
 
 Harmony is the central mechanic that determines progress in the game. It's calculated as a score from 0-100% based on several key factors:
 
-### Balance Factor (40% weight)
-- Measures how well distributed the love/logic ratios are across elements
-- Perfect balance is achieved when the average love/logic ratio is 0.5
-- The score decreases as the average moves toward either extreme (0 or 1)
-- Visual indicator: Green elements indicate balance, orange shows more love, blue shows more logic
+### Diversity Factor (75% weight)
+- Measures how well your structure balances elements with different love/logic ratios
+- Ideal distribution: ~40% love-dominant elements (>60% love), ~40% logic-dominant elements (<40% love), and ~20% balanced elements
+- Having both love and logic represented is essential - missing either type severely reduces harmony
+- Visual indicator: Orange elements indicate love-dominant, blue shows logic-dominant, green shows balanced
 
-### Connection Factor (30% weight)
+### Connection Factor (15% weight)
 - Evaluates how well elements are connected to each other
 - Optimal connection ratio is around 0.6 (not too sparse, not too dense)
 - Too few or too many connections reduce harmony
 - Purple lines indicate connections between elements
 
-### Evolution Factor (30% weight)
+### Evolution Factor (10% weight)
 - Assesses how balanced the evolution levels are across elements
 - Highest when the average evolution level is around 2.5
 - Large variations in evolution levels between elements create disharmony
@@ -26,9 +26,8 @@ Harmony is the central mechanic that determines progress in the game. It's calcu
 
 ### Disharmony Reduction
 Several factors can reduce overall harmony:
-- Variance in love/logic ratios (30% weight)
-- Variance in evolution levels (30% weight)
-- Level factor (40% weight) - higher levels have more potential for disharmony
+- Variance in evolution levels (50% weight)
+- Level factor (50% weight) - higher levels have more potential for disharmony
 
 ## Level Progression and Targets
 
@@ -41,6 +40,7 @@ Several factors can reduce overall harmony:
   - **Hard** (9-10): 50-60% base target
 - Targets increase with level progression
 - Small variations are added based on level number
+- Level 1 always has no target, allowing free experimentation
 
 ### Level Advancement
 When a player reaches the target harmony and clicks "COMPLETE":
@@ -53,11 +53,13 @@ When a player reaches the target harmony and clicks "COMPLETE":
 
 To achieve harmony, players should:
 
-### 1. Balance Love and Logic
-- Aim for an average love/logic ratio close to 0.5 across all elements
+### 1. Create Diverse Love/Logic Distribution
+- Aim for approximately 40% love-dominant elements (>60% love)
+- Aim for approximately 40% logic-dominant elements (<40% love)
+- Include some balanced elements (40-60% love) for stability
 - Use UP/DOWN arrow keys to adjust individual elements
-- Watch the color gradient: green indicates balance, orange shows more love, blue shows more logic
-- Consider creating pairs of elements that balance each other (one more love, one more logic)
+- Watch the color gradient: orange indicates love-dominant, blue shows logic-dominant, green shows balanced
+- Ensure both love and logic are represented in your structure
 
 ### 2. Create Optimal Connections
 - Connect approximately 60% of the possible connections between elements
@@ -97,7 +99,7 @@ As players progress through levels:
 ### Adaptive Difficulty
 - Higher levels have higher base targets
 - The disharmony factor increases with level, making perfect harmony harder to achieve
-- Players need to be more precise with their balance at higher levels
+- Players need to be more precise with their diversity at higher levels
 
 ### Scoring and Bonuses
 - Exceeding the target harmony provides bonus points

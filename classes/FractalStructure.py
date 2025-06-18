@@ -27,24 +27,40 @@ class FractalStructure:
              self.harmony_score = 0
              return
 
-         # Balance factor - how well distributed are love/logic ratios
+         # Get love/logic values for all elements
          love_values = [e.love_logic_ratio for e in self.elements]
          avg_love = sum(love_values) / len(love_values)
          
-         # Perfect balance at 0.5, decreases as it moves toward 0 or 1
-         balance_factor = 1 - abs(0.5 - avg_love) * 2  # Now ranges from 0 to 1
+         # Calculate diversity factor - NEW APPROACH
+         # Instead of rewarding average close to 0.5, we reward having a mix of love and logic
+         # This means we want some elements with high love and some with high logic
          
-         # Disharmony factor - increases with level and extreme love/logic values
-         # Higher levels should have more potential for disharmony
-         level_factor = min(1.0, self.level / 10)  # Caps at level 10
-         
-         # Calculate variance in love/logic ratios - more variance = more disharmony
-         if len(love_values) > 1:
-             variance = sum((x - avg_love) ** 2 for x in love_values) / len(love_values)
-             # Scale variance to a reasonable range (0 to 1)
-             variance_factor = min(1.0, variance * 10)
+         # First, check if we have enough elements to calculate diversity
+         if len(self.elements) <= 1:
+             # With only one element, diversity is impossible
+             diversity_factor = 0.5  # Neutral value
          else:
-             variance_factor = 0
+             # Count elements that are love-dominant (>0.6) and logic-dominant (<0.4)
+             love_dominant = sum(1 for v in love_values if v > 0.6)
+             logic_dominant = sum(1 for v in love_values if v < 0.4)
+             balanced = sum(1 for v in love_values if 0.4 <= v <= 0.6)
+             
+             # Calculate percentages
+             total_elements = len(self.elements)
+             love_percent = love_dominant / total_elements
+             logic_percent = logic_dominant / total_elements
+             balanced_percent = balanced / total_elements
+             
+             # Ideal distribution: ~40% love-dominant, ~40% logic-dominant, ~20% balanced
+             # Calculate how close we are to this ideal distribution
+             ideal_distribution = abs(love_percent - 0.4) + abs(logic_percent - 0.4) + abs(balanced_percent - 0.2)
+             # Convert to a 0-1 factor (0 = far from ideal, 1 = perfect match)
+             diversity_factor = 1 - min(1, ideal_distribution / 2)
+             
+             # Ensure we have both love and logic represented
+             if love_dominant == 0 or logic_dominant == 0:
+                 # Penalize if we're missing either love or logic elements
+                 diversity_factor *= 0.5
          
          # Connection factor - how well connected are elements
          # Too many or too few connections can create disharmony
@@ -76,11 +92,12 @@ class FractalStructure:
          evolution_factor = 1 - abs(2.5 - avg_evolution) / 2.5
          evolution_factor = max(0, min(1, evolution_factor))  # Clamp between 0 and 1
          
-         # Apply disharmony factors
-         disharmony = (variance_factor * 0.3 + evo_variance_factor * 0.3 + level_factor * 0.4) * 0.5
+         # Apply disharmony factors - but reduce the impact of variance since we now want diversity
+         level_factor = min(1.0, self.level / 10)  # Caps at level 10
+         disharmony = (evo_variance_factor * 0.5 + level_factor * 0.5) * 0.3  # Reduced overall disharmony
          
-         # Calculate overall harmony with disharmony reduction
-         raw_harmony = (balance_factor * 0.4 + connection_factor * 0.3 + evolution_factor * 0.3)
+         # Calculate overall harmony with diversity accounting for 75% as requested
+         raw_harmony = (diversity_factor * 0.75 + connection_factor * 0.15 + evolution_factor * 0.1)
          adjusted_harmony = raw_harmony * (1 - disharmony)
          
          # Ensure harmony is between 0 and 100%
@@ -88,7 +105,7 @@ class FractalStructure:
          
          # Debug output
          print(f"Level: {self.level}, Harmony: {self.harmony_score:.1f}%, " +
-               f"Balance: {balance_factor:.2f}, Connections: {connection_factor:.2f}, " +
+               f"Diversity: {diversity_factor:.2f}, Connections: {connection_factor:.2f}, " +
                f"Evolution: {evolution_factor:.2f}, Disharmony: {disharmony:.2f}")
 
      def draw_harmony_meter(self, surface):
@@ -208,19 +225,33 @@ class FractalStructure:
          """Provide a strategic hint based on current harmony factors"""
          # Get current factors
          love_values = [e.love_logic_ratio for e in self.elements]
-         avg_love = sum(love_values) / len(love_values) if love_values else 0.5
+         
+         if not love_values:
+             return "Add more elements to create a diverse structure."
+         
+         # Count elements in each category
+         love_dominant = sum(1 for v in love_values if v > 0.6)
+         logic_dominant = sum(1 for v in love_values if v < 0.4)
+         balanced = sum(1 for v in love_values if 0.4 <= v <= 0.6)
+         
+         total_elements = len(self.elements)
          
          # Count connections
          total_possible = len(self.elements) * (len(self.elements) - 1) / 2
          total_connections = sum(len(e.connections) for e in self.elements) / 2 if self.elements else 0
          connection_ratio = total_connections / total_possible if total_possible > 0 else 0
          
-         # Determine what's most needed
-         if abs(avg_love - 0.5) > 0.2:
-             if avg_love > 0.5:
-                 return "Try adding more logic (down arrow) to some elements for better balance."
-             else:
-                 return "Try adding more love (up arrow) to some elements for better balance."
+         # Determine what's most needed based on diversity
+         if total_elements < 3:
+             return "Add more elements to create a diverse structure."
+         elif love_dominant == 0:
+             return "Try adding elements with more love (>60%) for better diversity."
+         elif logic_dominant == 0:
+             return "Try adding elements with more logic (<40%) for better diversity."
+         elif love_dominant / total_elements < 0.3:
+             return "Your structure needs more love-dominant elements (>60% love)."
+         elif logic_dominant / total_elements < 0.3:
+             return "Your structure needs more logic-dominant elements (<40% love)."
          elif connection_ratio < 0.3:
              return "Your structure needs more connections between elements."
          elif connection_ratio > 0.8:
@@ -232,7 +263,7 @@ class FractalStructure:
              if avg_evolution < 2:
                  return "Try evolving some elements (space key) to increase complexity."
              else:
-                 return "Your structure is well-balanced. Consider changing some shapes (S key) for variety."
+                 return "Your structure has good diversity. Consider changing some shapes (S key) for variety."
 
      def draw_target_indicator(self, surface, target=None):
          """Draw an indicator showing progress toward the level target"""
