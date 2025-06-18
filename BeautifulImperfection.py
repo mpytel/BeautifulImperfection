@@ -172,6 +172,67 @@ if not os.path.exists('assets/Images'):
     os.makedirs('assets/Images', exist_ok=True)
 if not os.path.exists('assets/Sounds'):
     os.makedirs('assets/Sounds', exist_ok=True)
+if not os.path.exists('assets/Music'):
+    os.makedirs('assets/Music', exist_ok=True)
+
+# Function to check if all required music files are present
+def check_music_files():
+    """Check if all required music files (01-10) are present in the Music directory"""
+    music_dir = 'assets/Music'
+    missing_tracks = []
+    
+    for i in range(1, 11):
+        track_num = f"{i:02d}"
+        track_found = False
+        
+        # Check if any file starts with the track number
+        if os.path.exists(music_dir):
+            for file in os.listdir(music_dir):
+                if file.startswith(f"{track_num}_") and file.endswith('.mp3'):
+                    track_found = True
+                    break
+        
+        if not track_found:
+            missing_tracks.append(i)
+    
+    if missing_tracks:
+        print(f"Warning: Music files for tracks {missing_tracks} are missing from {music_dir}")
+        print("The game will still run, but some levels will not have unique music.")
+    else:
+        print("All music tracks (1-10) are present.")
+    
+    return len(missing_tracks) == 0
+
+# Function to load and play level-specific music
+def load_level_music(level):
+    """Load and play music based on the current level"""
+    # For levels 1-10, play the corresponding track
+    # For levels > 10, cycle through tracks 1-10
+    music_level = ((level - 1) % 10) + 1
+    
+    # Format the track number with leading zero
+    track_num = f"{music_level:02d}"
+    
+    # Get list of music files
+    music_dir = 'assets/Music'
+    try:
+        music_files = [f for f in os.listdir(music_dir) if f.startswith(f"{track_num}_") and f.endswith('.mp3')]
+        
+        if music_files:
+            music_path = os.path.join(music_dir, music_files[0])
+            print(f"Loading music for level {level}: {music_path}")
+            
+            # Load and play the music
+            pygame.mixer.music.load(music_path)
+            pygame.mixer.music.set_volume(0.5)  # Set volume to 50%
+            pygame.mixer.music.play(-1)  # -1 means loop indefinitely
+            return True
+        else:
+            print(f"No music file found for level {level} (track {track_num})")
+            return False
+    except (FileNotFoundError, pygame.error) as e:
+        print(f"Error loading music for level {level}: {e}")
+        return False
 
 # Create sound effects placeholders if they don't exist
 sound_files = {
@@ -264,11 +325,16 @@ if not os.path.exists('assets/Images/winningBalance.jpg'):
     pygame.draw.circle(placeholder, (100, 100, 255), (75, 75), 50, 5)
     pygame.image.save(placeholder, 'assets/Images/winningBalance.jpg')
 
-# Load and play background music
+# Check music files at startup
+check_music_files()
+
+# Try to load level 1 music initially
 try:
-    pygame.mixer.music.load('assets/Sounds/01_beautiful_imperfection.mp3')
-    pygame.mixer.music.set_volume(0.5)  # Set volume to 50%
-    pygame.mixer.music.play(-1)  # -1 means loop indefinitely
+    if not load_level_music(1):
+        # Fallback to a default music file if level-specific music fails
+        pygame.mixer.music.load('assets/Sounds/01_beautiful_imperfection.mp3')
+        pygame.mixer.music.set_volume(0.5)  # Set volume to 50%
+        pygame.mixer.music.play(-1)  # -1 means loop indefinitely
 except pygame.error as e:
     print(f"Could not load or play background music: {e}")
 
@@ -495,6 +561,9 @@ def restart_game():
 
     # Play sound effect
     sounds['button_click'].play()
+    
+    # Reset music to level 1
+    load_level_music(1)
 
     print("Game restarted at level 1")
 
@@ -777,6 +846,9 @@ def create_next_level():
 
     # Advance to the next level
     new_level = fractal.advance_level()
+    
+    # Load music for the new level
+    load_level_music(new_level)
 
     # Clear elements list
     elements.clear()
@@ -1141,9 +1213,14 @@ def main():
                     if music_playing:
                         pygame.mixer.music.pause()
                         music_playing = False
+                        print("Music paused")
                     else:
                         pygame.mixer.music.unpause()
                         music_playing = True
+                        print("Music resumed")
+                        # If music was stopped (not just paused), reload the current level's music
+                        if not pygame.mixer.music.get_busy():
+                            load_level_music(fractal.level)
 
                 # Restart game with R key
                 elif event.key == pygame.K_r and game_state == STATE_PLAYING:
@@ -1325,23 +1402,30 @@ def main():
 
         # Check if complete button was clicked
         if game_state == STATE_PLAYING and complete_button.is_clicked(mouse_pos, mouse_clicked):
-            # Check if target has been reached
+            # Check if target has been reached or if there is no target
             target = calculate_target_from_slider(fractal.level, difficulty_knob.value)
-            if fractal.harmony_score >= target:
+            if fractal.level == 1 or difficulty_knob.value <= 1 or fractal.harmony_score >= target:
                 # Save image of current level
                 saved_file = fractal.save_image()
                 print(f"Saved fractal image: {saved_file}")
 
                 # Add bonus points or rewards for exceeding target
+                # No bonus if there's no target
+                if fractal.level == 1 or difficulty_knob.value <= 1:
+                    bonus = 0
                 # Higher bonus multiplier for levels greater than 7
-                if fractal.level > 7:
+                elif fractal.level > 7:
                     bonus = (fractal.harmony_score - target) / 2.5  # 1 point for every 2.5% above target for higher levels
                 else:
                     bonus = (fractal.harmony_score - target) / 5  # 1 point for every 5% above target for lower levels
 
                 player_score += bonus
                 level_bonuses.append(bonus)
-                print(f"Level {fractal.level} complete! Target: {target:.1f}%, Achieved: {fractal.harmony_score:.1f}%, Bonus: {bonus:.1f}, Total Score: {player_score:.1f}")
+                
+                if fractal.level == 1 or difficulty_knob.value <= 1:
+                    print(f"Level {fractal.level} complete! No target required. Achieved: {fractal.harmony_score:.1f}%, Total Score: {player_score:.1f}")
+                else:
+                    print(f"Level {fractal.level} complete! Target: {target:.1f}%, Achieved: {fractal.harmony_score:.1f}%, Bonus: {bonus:.1f}, Total Score: {player_score:.1f}")
 
                 # Advance to next level
                 create_next_level()
@@ -1401,6 +1485,10 @@ def main():
 
         # Calculate target based on difficulty knob
         target = calculate_target_from_slider(fractal.level, difficulty_knob.value)
+        
+        # Always set target to 0 for level 1
+        if fractal.level == 1:
+            target = 0
 
         # Draw a more prominent target box at the top
         target_box_width = 300
@@ -1420,7 +1508,10 @@ def main():
 
         # Draw target percentage
         target_font = pygame.font.SysFont('Arial', 12)
-        target_text = target_font.render(f"Target: {target:.1f}%", True, (255, 0, 0))
+        if fractal.level == 1 or difficulty_knob.value <= 1:
+            target_text = target_font.render("No Target", True, (100, 100, 100))
+        else:
+            target_text = target_font.render(f"Target: {target:.1f}%", True, (255, 0, 0))
         screen.blit(target_text, (target_box_x + target_box_width - 100, target_box_y + 10))
 
         # Draw current harmony
@@ -1441,9 +1532,13 @@ def main():
         fill_width = int(progress_width * (fractal.harmony_score / 100))
         fill_width = max(0, min(progress_width, fill_width))
 
-        # Draw target marker
-        target_marker_x = progress_x + int(progress_width * (target / 100))
-        target_marker_x = max(progress_x, min(progress_x + progress_width, target_marker_x))
+        # Calculate target marker position (only if there is a target)
+        if (fractal.level > 1 and difficulty_knob.value > 1) and target > 0:
+            target_marker_x = progress_x + int(progress_width * (target / 100))
+            target_marker_x = max(progress_x, min(progress_x + progress_width, target_marker_x))
+        else:
+            # No target, set marker off-screen
+            target_marker_x = -10
 
         # Color gradient based on harmony score
         if fractal.harmony_score < 33:
@@ -1461,9 +1556,10 @@ def main():
         if fill_width > 0:
             pygame.draw.rect(screen, color, (progress_x, progress_y, fill_width, progress_height))
 
-        # Draw target marker
-        pygame.draw.line(screen, (255, 0, 0), (target_marker_x, progress_y - 2),
-                        (target_marker_x, progress_y + progress_height + 2), 2)
+        # Draw target marker (only if there is a target)
+        if fractal.level > 1 and difficulty_knob.value > 1:
+            pygame.draw.line(screen, (255, 0, 0), (target_marker_x, progress_y - 2),
+                            (target_marker_x, progress_y + progress_height + 2), 2)
 
         # Draw complete button next to target box
         complete_button.draw(screen)
