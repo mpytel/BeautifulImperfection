@@ -42,9 +42,9 @@ Players start with basic elements and must:
 ## Visual Elements
 
 - **Colors**:
-  - Love is represented by orange (#FF8D00)
-  - Logic is represented by blue (#0194DC)
-  - Perfect balance is represented by green (#97DAA7)
+  - Love is represented by orange
+  - Logic is represented by blue
+  - Perfect balance is represented by green
 
 - **Shapes**:
   - Circle, Square, Star, Hexagon, Pentagon
